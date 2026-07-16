@@ -181,18 +181,16 @@ async function pageToMarkdown(pageId, info) {
   const frontmatter = [
     "---",
     `title: ${JSON.stringify(info.title)}`,
-    `notion: ${info.url}`,
     `notion: ${JSON.stringify(info.url)}`,
     info.week ? `week: ${JSON.stringify(info.week)}` : undefined,
     info.category ? `category: ${JSON.stringify(info.category)}` : undefined,
     info.topics.length ? `topics: ${JSON.stringify(info.topics)}` : undefined,
     "---",
-    "",
   ]
     .filter(Boolean)
     .join("\n");
 
-  return `${frontmatter}# ${info.title}\n\n${body}\n`;
+  return `${frontmatter}\n\n\n# ${info.title}\n\n${body}\n`;
 }
 
 async function selectPages(pages) {
