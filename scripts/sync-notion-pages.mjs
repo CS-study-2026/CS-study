@@ -145,7 +145,7 @@ function buildFilter() {
     filters.push({
       property: "발표자",
       created_by: {
-        equals: userId,
+        contains: userId,
       },
     });
   }
