@@ -2,7 +2,6 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import crypto from "node:crypto";
 import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
@@ -490,13 +489,8 @@ function sanitizeFileName(name) {
     .replace(/[\\/:*?"<>|]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  const hash = crypto.createHash("sha1").update(cleaned).digest("hex").slice(0, 8);
-  const suffix = `-${hash}`;
-  const maxBaseBytes = 120 - Buffer.byteLength(suffix);
-  const base = truncateUtf8(cleaned, maxBaseBytes).replace(/[ .]+$/g, "");
   const base = truncateUtf8(cleaned, 120).replace(/[ .]+$/g, "");
 
-  return `${base || "Untitled"}${suffix}`;
   return base || "Untitled";
 }
 
