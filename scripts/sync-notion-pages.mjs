@@ -2,6 +2,7 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import crypto from "node:crypto";
 import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
@@ -484,11 +485,30 @@ function resolveTargetDir(info) {
 }
 
 function sanitizeFileName(name) {
-  return name
+  const cleaned = name
     .replace(/[\\/:*?"<>|]/g, " ")
     .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 180);
+    .trim();
+  const hash = crypto.createHash("sha1").update(cleaned).digest("hex").slice(0, 8);
+  const suffix = `-${hash}`;
+  const maxBaseBytes = 120 - Buffer.byteLength(suffix);
+  const base = truncateUtf8(cleaned, maxBaseBytes).replace(/[ .]+$/g, "");
+
+  return `${base || "Untitled"}${suffix}`;
+}
+
+function truncateUtf8(value, maxBytes) {
+  let output = "";
+  let bytes = 0;
+
+  for (const char of value) {
+    const charBytes = Buffer.byteLength(char);
+    if (bytes + charBytes > maxBytes) break;
+    output += char;
+    bytes += charBytes;
+  }
+
+  return output;
 }
 
 function sanitizeBranchName(name) {
