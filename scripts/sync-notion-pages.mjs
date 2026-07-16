@@ -183,6 +183,7 @@ async function pageToMarkdown(pageId, info) {
     "---",
     `title: ${JSON.stringify(info.title)}`,
     `notion: ${info.url}`,
+    `notion: ${JSON.stringify(info.url)}`,
     info.week ? `week: ${JSON.stringify(info.week)}` : undefined,
     info.category ? `category: ${JSON.stringify(info.category)}` : undefined,
     info.topics.length ? `topics: ${JSON.stringify(info.topics)}` : undefined,
@@ -493,8 +494,10 @@ function sanitizeFileName(name) {
   const suffix = `-${hash}`;
   const maxBaseBytes = 120 - Buffer.byteLength(suffix);
   const base = truncateUtf8(cleaned, maxBaseBytes).replace(/[ .]+$/g, "");
+  const base = truncateUtf8(cleaned, 120).replace(/[ .]+$/g, "");
 
   return `${base || "Untitled"}${suffix}`;
+  return base || "Untitled";
 }
 
 function truncateUtf8(value, maxBytes) {
