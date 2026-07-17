@@ -83,7 +83,7 @@ for (const page of pages) {
     continue;
   }
 
-  const markdown = await pageToMarkdown(page.id, info);
+  const markdown = await pageToMarkdown(page.id, info, relativePath);
   await fs.mkdir(path.dirname(fullPath), { recursive: true });
   await fs.writeFile(fullPath, markdown, "utf8");
   console.log(`wrote ${relativePath}`);
@@ -175,9 +175,9 @@ function buildFilter() {
   return filters.length === 1 ? filters[0] : { and: filters };
 }
 
-async function pageToMarkdown(pageId, info) {
+async function pageToMarkdown(pageId, info, relativePath) {
   const blocks = await listBlockChildren(pageId);
-  const body = renderBlocks(blocks).trim();
+  const body = (await renderBlocks(blocks, 0, createRenderContext(pageId, relativePath))).trim();
   const frontmatter = [
     "---",
     `title: ${JSON.stringify(info.title)}`,
@@ -333,17 +333,31 @@ async function markPageUploaded(pageId) {
   });
 }
 
-function renderBlocks(blocks, depth = 0) {
-  return blocks
-    .map((block) => renderBlock(block, depth))
-    .filter(Boolean)
-    .join("\n");
+function createRenderContext(pageId, relativePath) {
+  return {
+    pageId,
+    relativePath,
+    imageIndex: 0,
+  };
 }
 
-function renderBlock(block, depth) {
+async function renderBlocks(blocks, depth = 0, context) {
+  const rendered = [];
+
+  for (const block of blocks) {
+    const markdown = await renderBlock(block, depth, context);
+    if (markdown) rendered.push(markdown);
+  }
+
+  return rendered.join("\n\n");
+}
+
+async function renderBlock(block, depth, context) {
   const type = block.type;
   const data = block[type];
-  const children = block.children?.length ? `\n${renderBlocks(block.children, depth + 1)}` : "";
+  const children = block.children?.length
+    ? `\n\n${await renderBlocks(block.children, depth + 1, context)}`
+    : "";
 
   switch (type) {
     case "paragraph":
@@ -372,8 +386,9 @@ function renderBlock(block, depth) {
       return "---";
     case "image": {
       const url = data.type === "external" ? data.external.url : data.file?.url;
-      const caption = richText(data.caption) || "image";
-      return url ? `![${caption}](${url})` : "";
+      const caption = imageAltText(data.caption);
+      const localPath = url ? await downloadImage(url, context) : "";
+      return localPath ? `![${caption}](${localPath})` : "";
     }
     case "bookmark":
     case "link_preview":
@@ -387,6 +402,69 @@ function renderBlock(block, depth) {
     default:
       return richText(data?.rich_text || []) || children.trim();
   }
+}
+
+async function downloadImage(url, context) {
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`Failed to download image: ${response.status} ${response.statusText}`);
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  const extension = imageExtension(url, contentType);
+  context.imageIndex += 1;
+
+  const pageAssetDir = path.join("assets", "notion", sanitizeAssetPathPart(context.pageId));
+  const fileName = `image-${String(context.imageIndex).padStart(2, "0")}${extension}`;
+  const assetRelativePath = path.join(pageAssetDir, fileName);
+  const assetFullPath = path.join(outputDir, assetRelativePath);
+  const buffer = Buffer.from(await response.arrayBuffer());
+
+  await fs.mkdir(path.dirname(assetFullPath), { recursive: true });
+  await fs.writeFile(assetFullPath, buffer);
+
+  const markdownPath = path
+    .relative(path.dirname(context.relativePath), assetRelativePath)
+    .split(path.sep)
+    .join("/");
+
+  return markdownPath || fileName;
+}
+
+function imageExtension(url, contentType) {
+  const byContentType = {
+    "image/gif": ".gif",
+    "image/jpeg": ".jpg",
+    "image/jpg": ".jpg",
+    "image/png": ".png",
+    "image/svg+xml": ".svg",
+    "image/webp": ".webp",
+  };
+
+  if (byContentType[contentType.split(";")[0].trim().toLowerCase()]) {
+    return byContentType[contentType.split(";")[0].trim().toLowerCase()];
+  }
+
+  try {
+    const pathname = new URL(url).pathname;
+    const extension = path.extname(pathname).toLowerCase();
+    if ([".gif", ".jpeg", ".jpg", ".png", ".svg", ".webp"].includes(extension)) {
+      return extension === ".jpeg" ? ".jpg" : extension;
+    }
+  } catch {
+    // Fall through to the default extension.
+  }
+
+  return ".png";
+}
+
+function sanitizeAssetPathPart(value) {
+  return value.replace(/[^a-zA-Z0-9_-]/g, "");
+}
+
+function imageAltText(items = []) {
+  return (plainText(items).trim() || "image").replace(/[\][\n\r]/g, " ");
 }
 
 function renderTable(rows) {

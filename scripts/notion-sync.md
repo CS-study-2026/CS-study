@@ -12,6 +12,7 @@ Notion `CS study` 데이터베이스에서 내 페이지를 Markdown 파일로 �
 - `네트워크`, `웹/앱`은 `04. 네트워크`에 저장합니다.
 - `데이터베이스`는 `05. 데이터베이스`에 저장합니다.
 - 파일명은 Notion 페이지의 `제목`과 같게 만들고, 파일 시스템에서 쓸 수 없는 문자만 공백으로 바꿉니다.
+- Notion 이미지 파일은 동기화 시점에 다운로드해 `assets/notion/{페이지ID}/` 아래에 저장하고, Markdown에서는 상대경로로 참조합니다.
 
 ## 준비
 
@@ -47,6 +48,7 @@ git checkout -b feature/notion-sync-my-pages
 4. 작성자별 브랜치를 만듭니다.
    - 예: `notion-sync/이혜림`
 5. 작성자별 페이지를 주제 규칙에 맞춰 Markdown 파일로 생성합니다.
+   - 페이지 안의 이미지는 `assets/notion/{페이지ID}/image-01.png` 같은 파일로 함께 저장합니다.
 6. 작성자별 브랜치에 커밋하고 push합니다.
 7. 작성자별 Pull Request를 생성하거나 기존 PR을 업데이트합니다.
 8. PR 생성 또는 업데이트가 성공하면 처리한 Notion 페이지의 `깃헙` 체크박스를 켭니다.
@@ -142,6 +144,13 @@ NOTION_TOKEN=secret_xxx \
 node scripts/sync-notion-pages.mjs \
   --user-id 작성자_NOTION_USER_ID \
   --write-page-ids /tmp/notion-synced-pages.json
+```
+
+생성 결과에는 Markdown 파일과 이미지 파일이 함께 포함됩니다.
+
+```plain text
+00. 자율 주제/Redis를 써보자.md
+assets/notion/3334f7753cf280e89bb3d33d75d863b1/image-01.png
 ```
 
 Actions처럼 PR 생성 후에만 Notion 체크박스를 켜려면 처리한 페이지 ID를 파일로 저장한 뒤, PR 생성이 성공한 다음 별도 명령으로 체크합니다.
