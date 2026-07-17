@@ -74,7 +74,7 @@ const writtenPageIds = [];
 for (const page of pages) {
   const info = getPageInfo(page);
   const targetDir = resolveTargetDir(info);
-  const fileName = `${sanitizeFileName(info.title)}.md`;
+  const fileName = markdownFileName(info.title);
   const relativePath = path.join(targetDir, fileName);
   const fullPath = path.join(outputDir, relativePath);
 
@@ -181,6 +181,7 @@ async function pageToMarkdown(pageId, info, relativePath) {
   const frontmatter = [
     "---",
     `title: ${JSON.stringify(info.title)}`,
+    info.author.name ? `author: ${JSON.stringify(info.author.name)}` : undefined,
     `notion: ${JSON.stringify(info.url)}`,
     info.week ? `week: ${JSON.stringify(info.week)}` : undefined,
     info.category ? `category: ${JSON.stringify(info.category)}` : undefined,
@@ -200,7 +201,7 @@ async function selectPages(pages) {
 
   pages.forEach((page, index) => {
     const info = getPageInfo(page);
-    const targetPath = path.join(resolveTargetDir(info), `${sanitizeFileName(info.title)}.md`);
+    const targetPath = path.join(resolveTargetDir(info), markdownFileName(info.title));
     console.log(`${index + 1}. [${info.week || "no week"}] ${info.title}`);
     console.log(`   -> ${targetPath}`);
   });
@@ -568,6 +569,14 @@ function sanitizeFileName(name) {
   const base = truncateUtf8(cleaned, 120).replace(/[ .]+$/g, "");
 
   return base || "Untitled";
+}
+
+function markdownFileName(title) {
+  return `${sanitizeFileName(padLeadingSingleDigit(title))}.md`;
+}
+
+function padLeadingSingleDigit(title) {
+  return title.replace(/^(\d)(?=\s*[-.]\s*)/, "0$1");
 }
 
 function truncateUtf8(value, maxBytes) {
