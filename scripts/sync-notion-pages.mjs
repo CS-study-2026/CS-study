@@ -609,22 +609,85 @@ function indent(depth) {
 }
 
 async function notion(endpoint, options = {}) {
-  const response = await fetch(`https://api.notion.com${endpoint}`, {
-    method: options.method || "GET",
-    headers: {
-      Authorization: `Bearer ${notionToken}`,
-      "Notion-Version": NOTION_VERSION,
-      "Content-Type": "application/json",
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
+  const maxAttempts = 5;
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`${response.status} ${response.statusText}: ${text}`);
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await fetch(`https://api.notion.com${endpoint}`, {
+        method: options.method || "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${notionToken}`,
+          "Notion-Version": NOTION_VERSION,
+          "Content-Type": "application/json",
+        },
+        body: options.body ? JSON.stringify(options.body) : undefined,
+      });
+
+      const text = await response.text();
+      const retryDelay = notionRetryDelay(response, attempt);
+
+      if (!response.ok) {
+        if (retryDelay && attempt < maxAttempts) {
+          await sleep(retryDelay);
+          continue;
+        }
+
+        throw new Error(`${response.status} ${response.statusText}: ${compactResponseText(text)}`);
+      }
+
+      try {
+        return text ? JSON.parse(text) : {};
+      } catch (error) {
+        if (attempt < maxAttempts) {
+          await sleep(backoffDelay(attempt));
+          continue;
+        }
+
+        throw new Error(`Invalid JSON response from Notion: ${compactResponseText(text)}`);
+      }
+    } catch (error) {
+      if (attempt < maxAttempts && isRetryableNetworkError(error)) {
+        await sleep(backoffDelay(attempt));
+        continue;
+      }
+
+      throw error;
+    }
   }
 
-  return response.json();
+  throw new Error(`Notion request failed after ${maxAttempts} attempts: ${endpoint}`);
+}
+
+function notionRetryDelay(response, attempt) {
+  if (response.status === 429) {
+    const retryAfter = Number(response.headers.get("retry-after"));
+    return Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : backoffDelay(attempt);
+  }
+
+  if (response.status >= 500 && response.status <= 599) {
+    return backoffDelay(attempt);
+  }
+
+  return 0;
+}
+
+function backoffDelay(attempt) {
+  return Math.min(1000 * 2 ** (attempt - 1), 10000);
+}
+
+function isRetryableNetworkError(error) {
+  return error instanceof TypeError || ["ECONNRESET", "ETIMEDOUT", "UND_ERR_SOCKET"].includes(error.code);
+}
+
+function compactResponseText(text) {
+  return text.replace(/\s+/g, " ").trim().slice(0, 500);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 function parseArgs(argv) {
