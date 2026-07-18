@@ -73,8 +73,7 @@ jobs:
               --write-page-ids "$page_ids_file"
 
             if [ -z "$(git status --porcelain)" ]; then
-              echo "No file changes for ${author_name}; marking pages as uploaded."
-              node scripts/sync-notion-pages.mjs --mark-page-ids "$page_ids_file"
+              echo "No file changes for ${author_name}; leaving Notion checkboxes unchanged."
               continue
             fi
 
