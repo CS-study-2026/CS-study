@@ -9,6 +9,14 @@ const NOTION_VERSION = process.env.NOTION_VERSION || "2026-03-11";
 const DEFAULT_DATABASE_ID = "2db4f7753cf280618152dc418edd9dcc";
 const DEFAULT_DATA_SOURCE_ID = "2db4f775-3cf2-80a4-89dd-000bca3a3f83";
 const EXCLUDED_WEEKS = new Set(["1월 2주차", "1월 3주차"]);
+const TOPIC_DIRS = [
+  "00. 자율 주제",
+  "01. 컴퓨터 구조",
+  "02. 운영체제",
+  "03. 자료구조 및 알고리즘",
+  "04. 네트워크",
+  "05. 데이터베이스",
+];
 
 const args = parseArgs(process.argv.slice(2));
 const notionToken = process.env.NOTION_TOKEN;
@@ -75,17 +83,22 @@ const usedRelativePaths = new Set();
 for (const page of pages) {
   const info = getPageInfo(page);
   const targetDir = resolveTargetDir(info);
-  const relativePath = await resolveMarkdownPath(targetDir, info);
+  const existingPaths = await findExistingMarkdownPaths(info);
+  const relativePath = await resolveMarkdownPath(targetDir, info, existingPaths);
   const fullPath = path.join(outputDir, relativePath);
 
   if (dryRun) {
     console.log(`[dry-run] ${info.title} -> ${relativePath}`);
+    for (const existingPath of staleExistingPaths(existingPaths, relativePath)) {
+      console.log(`[dry-run] remove stale path ${existingPath}`);
+    }
     continue;
   }
 
   const markdown = await pageToMarkdown(page.id, info, relativePath);
   await fs.mkdir(path.dirname(fullPath), { recursive: true });
   await fs.writeFile(fullPath, markdown, "utf8");
+  await removeStaleMarkdownFiles(existingPaths, relativePath);
   console.log(`wrote ${relativePath}`);
   writtenPageIds.push(page.id);
 
@@ -619,7 +632,7 @@ async function resolveMarkdownPath(targetDir, info) {
     }
 
     const existingNotion = await readExistingNotionUrl(relativePath);
-    if (existingNotion && existingNotion !== info.url) {
+    if (existingNotion && !sameNotionPage(existingNotion, info.url)) {
       continue;
     }
 
@@ -631,6 +644,49 @@ async function resolveMarkdownPath(targetDir, info) {
   }
 
   throw new Error(`Could not create a unique file path for "${info.title}" in ${targetDir}`);
+}
+
+async function findExistingMarkdownPaths(info) {
+  const matches = [];
+
+  for (const dir of TOPIC_DIRS) {
+    let entries;
+    try {
+      entries = await fs.readdir(path.join(outputDir, dir), { withFileTypes: true });
+    } catch (error) {
+      if (error.code === "ENOENT") {
+        continue;
+      }
+
+      throw error;
+    }
+
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.endsWith(".md") || entry.name === "README.md") {
+        continue;
+      }
+
+      const relativePath = path.join(dir, entry.name);
+      const existingNotion = await readExistingNotionUrl(relativePath);
+      if (existingNotion && sameNotionPage(existingNotion, info.url)) {
+        matches.push(relativePath);
+      }
+    }
+  }
+
+  return matches;
+}
+
+async function removeStaleMarkdownFiles(existingPaths, currentPath) {
+  for (const existingPath of staleExistingPaths(existingPaths, currentPath)) {
+    await fs.rm(path.join(outputDir, existingPath), { force: true });
+    console.log(`removed stale path ${existingPath}`);
+  }
+}
+
+function staleExistingPaths(existingPaths, currentPath) {
+  const normalizedCurrentPath = normalizeRelativePath(currentPath);
+  return existingPaths.filter((existingPath) => normalizeRelativePath(existingPath) !== normalizedCurrentPath);
 }
 
 async function readExistingNotionUrl(relativePath) {
@@ -645,6 +701,28 @@ async function readExistingNotionUrl(relativePath) {
 
     throw error;
   }
+}
+
+function sameNotionPage(leftUrl, rightUrl) {
+  const leftKey = notionPageKey(leftUrl);
+  const rightKey = notionPageKey(rightUrl);
+
+  if (leftKey && rightKey) {
+    return leftKey === rightKey;
+  }
+
+  return leftUrl === rightUrl;
+}
+
+function notionPageKey(url) {
+  const match = String(url).match(
+    /([0-9a-fA-F]{32}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?:[?#/]|$)/,
+  );
+  return match ? match[1].replace(/-/g, "").toLowerCase() : "";
+}
+
+function normalizeRelativePath(relativePath) {
+  return relativePath.split(path.sep).join("/");
 }
 
 function markdownFileName(title) {
