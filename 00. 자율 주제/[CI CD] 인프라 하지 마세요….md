@@ -4,7 +4,6 @@ author: "조재봉"
 notion: "https://app.notion.com/p/CI-CD-3024f7753cf28020aad4fb9c86adce73"
 week: "2월 2주차"
 category: "자율"
-topics: ["네트워크","웹/앱"]
 ---
 
 
