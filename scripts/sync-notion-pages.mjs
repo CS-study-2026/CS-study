@@ -70,12 +70,12 @@ if (interactive) {
 }
 
 const writtenPageIds = [];
+const usedRelativePaths = new Set();
 
 for (const page of pages) {
   const info = getPageInfo(page);
   const targetDir = resolveTargetDir(info);
-  const fileName = markdownFileName(info.title);
-  const relativePath = path.join(targetDir, fileName);
+  const relativePath = await resolveMarkdownPath(targetDir, info);
   const fullPath = path.join(outputDir, relativePath);
 
   if (dryRun) {
@@ -468,6 +468,41 @@ function imageAltText(items = []) {
   return (plainText(items).trim() || "image").replace(/[\][\n\r]/g, " ");
 }
 
+function parseFrontmatter(content) {
+  if (!content.startsWith("---\n")) {
+    return {};
+  }
+
+  const end = content.indexOf("\n---", 4);
+  if (end === -1) {
+    return {};
+  }
+
+  const frontmatter = {};
+  const lines = content.slice(4, end).split("\n");
+
+  for (const line of lines) {
+    const match = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
+    if (!match) continue;
+
+    const [, key, rawValue] = match;
+    frontmatter[key] = parseFrontmatterValue(rawValue);
+  }
+
+  return frontmatter;
+}
+
+function parseFrontmatterValue(value) {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return trimmed.replace(/^["']|["']$/g, "");
+  }
+}
+
 function renderTable(rows) {
   const cells = rows.map((row) => row.table_row.cells.map((cell) => richText(cell)));
   if (cells.length === 0) return "";
@@ -569,6 +604,47 @@ function sanitizeFileName(name) {
   const base = truncateUtf8(cleaned, 120).replace(/[ .]+$/g, "");
 
   return base || "Untitled";
+}
+
+async function resolveMarkdownPath(targetDir, info) {
+  const baseName = sanitizeFileName(padLeadingSingleDigit(info.title));
+
+  for (let index = 1; index < 1000; index += 1) {
+    const suffix = index === 1 ? "" : ` (${index})`;
+    const relativePath = path.join(targetDir, `${baseName}${suffix}.md`);
+    const normalizedPath = relativePath.split(path.sep).join("/");
+
+    if (usedRelativePaths.has(normalizedPath)) {
+      continue;
+    }
+
+    const existingNotion = await readExistingNotionUrl(relativePath);
+    if (existingNotion && existingNotion !== info.url) {
+      continue;
+    }
+
+    usedRelativePaths.add(normalizedPath);
+    if (index > 1) {
+      console.log(`using unique file name for duplicate title: ${relativePath}`);
+    }
+    return relativePath;
+  }
+
+  throw new Error(`Could not create a unique file path for "${info.title}" in ${targetDir}`);
+}
+
+async function readExistingNotionUrl(relativePath) {
+  try {
+    const content = await fs.readFile(path.join(outputDir, relativePath), "utf8");
+    const frontmatter = parseFrontmatter(content);
+    return frontmatter.notion || "";
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return "";
+    }
+
+    throw error;
+  }
 }
 
 function markdownFileName(title) {
