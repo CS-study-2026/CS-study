@@ -1,0 +1,69 @@
+name: Update folder READMEs
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: update-folder-readmes
+  cancel-in-progress: false
+
+jobs:
+  update-readmes:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+       startsWith(github.event.pull_request.head.ref, 'notion-sync/'))
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Wait until all Notion sync PRs are closed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          open_count="$(gh pr list \
+            --repo "$REPOSITORY" \
+            --state open \
+            --json headRefName \
+            --jq '[.[] | select(.headRefName | startswith("notion-sync/"))] | length')"
+
+          if [ "$open_count" != "0" ]; then
+            echo "There are still ${open_count} open notion-sync PR(s). Skipping README update."
+            exit 0
+          fi
+
+      - name: Generate folder READMEs
+        run: node scripts/generate-readmes.mjs
+
+      - name: Commit README updates
+        run: |
+          set -euo pipefail
+
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No README changes."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- ':(glob)*/README.md'
+          git commit -m "docs: update folder README indexes"
+          git push
