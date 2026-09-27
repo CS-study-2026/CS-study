@@ -9,14 +9,7 @@ const NOTION_VERSION = process.env.NOTION_VERSION || "2026-03-11";
 const DEFAULT_DATABASE_ID = "2db4f7753cf280618152dc418edd9dcc";
 const DEFAULT_DATA_SOURCE_ID = "2db4f775-3cf2-80a4-89dd-000bca3a3f83";
 const EXCLUDED_WEEKS = new Set(["1월 2주차", "1월 3주차"]);
-const TOPIC_DIRS = [
-  "00. 자율 주제",
-  "01. 컴퓨터 구조",
-  "02. 운영체제",
-  "03. 자료구조 및 알고리즘",
-  "04. 네트워크",
-  "05. 데이터베이스",
-];
+const NON_TOPIC_DIRS = new Set(["assets", "node_modules", "scripts"]);
 
 const args = parseArgs(process.argv.slice(2));
 const notionToken = process.env.NOTION_TOKEN;
@@ -606,7 +599,21 @@ function resolveTargetDir(info) {
     }
   }
 
-  return "00. 자율 주제";
+  return sanitizeDirectoryName(info.topics[0]);
+}
+
+function sanitizeDirectoryName(name) {
+  const cleaned = name
+    .replace(/[\\/:*?"<>|]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const directoryName = truncateUtf8(cleaned, 100).replace(/[ .]+$/g, "");
+
+  if (!directoryName || directoryName === "." || directoryName === "..") {
+    throw new Error(`Cannot create a directory from topic "${name}".`);
+  }
+
+  return directoryName;
 }
 
 function sanitizeFileName(name) {
@@ -648,8 +655,9 @@ async function resolveMarkdownPath(targetDir, info) {
 
 async function findExistingMarkdownPaths(info) {
   const matches = [];
+  const topicDirs = await listTopicDirs();
 
-  for (const dir of TOPIC_DIRS) {
+  for (const dir of topicDirs) {
     let entries;
     try {
       entries = await fs.readdir(path.join(outputDir, dir), { withFileTypes: true });
@@ -675,6 +683,19 @@ async function findExistingMarkdownPaths(info) {
   }
 
   return matches;
+}
+
+async function listTopicDirs() {
+  const entries = await fs.readdir(outputDir, { withFileTypes: true });
+
+  return entries
+    .filter(
+      (entry) =>
+        entry.isDirectory() &&
+        !entry.name.startsWith(".") &&
+        !NON_TOPIC_DIRS.has(entry.name),
+    )
+    .map((entry) => entry.name);
 }
 
 async function removeStaleMarkdownFiles(existingPaths, currentPath) {

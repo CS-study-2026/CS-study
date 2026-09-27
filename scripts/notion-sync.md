@@ -6,6 +6,8 @@ Notion `CS study` 데이터베이스에서 내 페이지를 Markdown 파일로 �
 
 - `1월 2주차`, `1월 3주차` 페이지는 항상 제외합니다.
 - `주제`가 비어 있는 페이지는 `00. 자율 주제`에 저장합니다.
+- 기존 분류 규칙에 없는 새 주제는 주제 이름과 같은 폴더를 자동으로 만들어 저장합니다.
+- 여러 주제가 선택되어 있으면 기존 통합 분류를 우선하고, 해당하는 분류가 없으면 첫 번째 주제를 폴더명으로 사용합니다.
 - `컴퓨터 구조`, `CPU`, `문자 인식`은 `01. 컴퓨터 구조`에 저장합니다.
 - `운영체제`는 `02. 운영체제`에 저장합니다.
 - `자료 구조`, `자료구조`, `이진탐색트리`, `알고리즘`은 `03. 자료구조 및 알고리즘`에 저장합니다.
@@ -49,7 +51,7 @@ git checkout -b feature/notion-sync-my-pages
 3. 페이지를 `발표자` 기준으로 그룹화합니다.
 4. 작성자별 브랜치를 만듭니다.
    - 예: `notion-sync/이혜림`
-5. 작성자별 페이지를 주제 규칙에 맞춰 Markdown 파일로 생성합니다.
+5. 작성자별 페이지를 주제 규칙에 맞춰 Markdown 파일로 생성합니다. 새 주제의 폴더는 자동으로 생성됩니다.
    - 페이지 안의 이미지는 `assets/notion/{페이지ID}/image-01.png` 같은 파일로 함께 저장합니다.
 6. 작성자별 브랜치에 커밋하고 push합니다.
 7. 작성자별 Pull Request를 생성하거나 기존 PR을 업데이트합니다.
@@ -167,3 +169,43 @@ node scripts/sync-notion-pages.mjs --mark-page-ids /tmp/notion-synced-pages.json
 자동화 파일이 레포에 들어간 뒤에는 직접 PR을 만들 필요가 없습니다. GitHub에서 `Actions` → `Sync Notion pages` → `Run workflow`를 누르면 작성자별 브랜치와 PR이 자동으로 생성됩니다.
 
 매주 자동 실행은 화요일 23:00 KST에 동작합니다.
+
+## 폴더별 README 자동 생성
+
+`scripts/generate-readmes.mjs`는 각 주제 폴더의 Markdown 파일을 읽고 폴더별 `README.md` 목차를 생성합니다.
+
+기본 생성 대상:
+
+```plain text
+00. 자율 주제/README.md
+01. 컴퓨터 구조/README.md
+02. 운영체제/README.md
+03. 자료구조 및 알고리즘/README.md
+04. 네트워크/README.md
+05. 데이터베이스/README.md
+```
+
+새 주제 폴더가 생성되면 해당 폴더도 README 생성 대상에 자동으로 포함됩니다. 예를 들어 `ETC` 주제가 추가되면 `ETC/README.md`가 함께 생성됩니다.
+
+`update-readmes.yml` 워크플로는 `notion-sync/*` PR이 merge될 때 실행됩니다. 아직 열린 `notion-sync/*` PR이 남아 있으면 README 갱신을 건너뛰고, 모든 Notion 동기화 PR이 닫힌 상태일 때만 기본 브랜치 기준으로 README를 다시 생성한 뒤 main에 직접 커밋합니다.
+
+수동으로 생성하려면 아래 명령을 실행합니다.
+
+```bash
+node scripts/generate-readmes.mjs
+```
+
+생성되는 README 예시:
+
+```markdown
+# 03. 자료구조 및 알고리즘
+
+<!-- 이 파일은 scripts/generate-readmes.mjs로 자동 생성됩니다. 직접 수정하지 마세요. -->
+
+총 2개의 페이지가 있습니다.
+
+| 주차 | 제목 | 작성자 |
+| --- | --- | --- |
+| 3월 1주차 | [1-1. 그래프와 트리의 차이가 무엇인가요?](./1-1.%20%EA%B7%B8%EB%9E%98%ED%94%84%EC%99%80%20%ED%8A%B8%EB%A6%AC%EC%9D%98%20%EC%B0%A8%EC%9D%B4%EA%B0%80%20%EB%AC%B4%EC%97%87%EC%9D%B8%EA%B0%80%EC%9A%94%3F.md) | 이혜림 |
+| 4월 1주차 | [09-4. 왜 현대 OS는 Deadlock을 처리하지 않을까요](./09-4.%20%EC%99%9C%20%ED%98%84%EB%8C%80%20OS%EB%8A%94%20Deadlock%EC%9D%84%20%EC%B2%98%EB%A6%AC%ED%95%98%EC%A7%80%20%EC%95%8A%EC%9D%84%EA%B9%8C%EC%9A%94.md) | 박영빈 |
+```
