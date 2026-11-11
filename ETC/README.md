@@ -2,7 +2,7 @@
 
 <!-- 이 파일은 scripts/generate-readmes.mjs로 자동 생성됩니다. 직접 수정하지 마세요. -->
 
-총 9개의 페이지가 있습니다.
+총 11개의 페이지가 있습니다.
 
 | 주차 | 제목 | 작성자 |
 | --- | --- | --- |
@@ -15,3 +15,5 @@
 | 9월 5주차 | [4-3. 오버로딩과 오버라이딩의 차이에 대해 설명해 주세요.](./04-3.%20%EC%98%A4%EB%B2%84%EB%A1%9C%EB%94%A9%EA%B3%BC%20%EC%98%A4%EB%B2%84%EB%9D%BC%EC%9D%B4%EB%94%A9%EC%9D%98%20%EC%B0%A8%EC%9D%B4%EC%97%90%20%EB%8C%80%ED%95%B4%20%EC%84%A4%EB%AA%85%ED%95%B4%20%EC%A3%BC%EC%84%B8%EC%9A%94.md) | 이지영 |
 | 10월 3주차 | [7-1. Side Effect가 무엇인가요? 이를 모두 없애는 프로그래밍이 이상적이라고 할 수 있을까요?](./07-1.%20Side%20Effect%EA%B0%80%20%EB%AC%B4%EC%97%87%EC%9D%B8%EA%B0%80%EC%9A%94%20%EC%9D%B4%EB%A5%BC%20%EB%AA%A8%EB%91%90%20%EC%97%86%EC%95%A0%EB%8A%94%20%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%98%EB%B0%8D%EC%9D%B4%20%EC%9D%B4%EC%83%81%EC%A0%81%EC%9D%B4%EB%9D%BC%EA%B3%A0%20%ED%95%A0%20%EC%88%98%20%EC%9E%88%EC%9D%84%EA%B9%8C%EC%9A%94.md) | 혜민 은 |
 | 10월 3주차 | [7-2. 왜 함수형 프로그래밍 매커니즘을 사용한다고 생각하시나요?](./07-2.%20%EC%99%9C%20%ED%95%A8%EC%88%98%ED%98%95%20%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%98%EB%B0%8D%20%EB%A7%A4%EC%BB%A4%EB%8B%88%EC%A6%98%EC%9D%84%20%EC%82%AC%EC%9A%A9%ED%95%9C%EB%8B%A4%EA%B3%A0%20%EC%83%9D%EA%B0%81%ED%95%98%EC%8B%9C%EB%82%98%EC%9A%94.md) | 혜민 은 |
+| 11월 1주차 | [6. Call By Value와 Call By Reference의 차이를 본인의 언어를 기반으로 설명해 주세요. (사실 이 질문에는 약간의 낚시가 있습니다. 과연 모든 언어에 저 개념이 존재할까요?)](./06.%20Call%20By%20Value%EC%99%80%20Call%20By%20Reference%EC%9D%98%20%EC%B0%A8%EC%9D%B4%EB%A5%BC%20%EB%B3%B8%EC%9D%B8%EC%9D%98%20%EC%96%B8%EC%96%B4%EB%A5%BC%20%EA%B8%B0%EB%B0%98%EC%9C%BC%EB%A1%9C%20%EC%84%A4%EB%AA%85%ED%95%B4%20%EC%A3%BC%EC%84%B8%EC%9A%94.%20(%EC%82%AC%EC%8B%A4%20%EC%9D%B4.md) | 이혜림 |
+| 11월 1주차 | [7-0. 순수함수가 무엇인지를 함수형 프로그래밍 매커니즘과 연관지어 설명해 주세요.](./07-0.%20%EC%88%9C%EC%88%98%ED%95%A8%EC%88%98%EA%B0%80%20%EB%AC%B4%EC%97%87%EC%9D%B8%EC%A7%80%EB%A5%BC%20%ED%95%A8%EC%88%98%ED%98%95%20%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%98%EB%B0%8D%20%EB%A7%A4%EC%BB%A4%EB%8B%88%EC%A6%98%EA%B3%BC%20%EC%97%B0%EA%B4%80%EC%A7%80%EC%96%B4%20%EC%84%A4%EB%AA%85%ED%95%B4%20%EC%A3%BC%EC%84%B8%EC%9A%94.md) | 이혜림 |
